@@ -1,6 +1,7 @@
 import type { LobbyView, MatchStart } from './OnlineClient';
 import {
   OnlineClient,
+  connectionTimeoutMs,
   inviteLink,
   pendingJoinCode,
   resolveServerUrl,
@@ -20,6 +21,7 @@ export interface OnlinePanelActions {
 export class OnlinePanel {
   private client: OnlineClient | undefined;
   private started = false;
+  private destroyed = false;
 
   public constructor(
     private readonly root: HTMLElement,
@@ -34,6 +36,7 @@ export class OnlinePanel {
   }
 
   public destroy(): void {
+    this.destroyed = true;
     // Leaving the panel before a match starts abandons the lobby; a started match hands
     // its client to the battlefield scene instead.
     if (!this.started && this.client !== undefined) {
@@ -97,11 +100,27 @@ export class OnlinePanel {
       submit.setAttribute('aria-busy', 'true');
     }
     this.root.dataset.onlineBusy = 'true';
+    if (connectionTimeoutMs(resolveServerUrl()) > 6000) {
+      const notice = document.createElement('p');
+      notice.className = 'front-note';
+      notice.setAttribute('role', 'status');
+      notice.dataset.onlineProgress = 'true';
+      notice.textContent =
+        'Connecting to the server… Free hosting may need about a minute to wake up. Please keep this window open.';
+      form.append(notice);
+    }
   }
 
   private async connect(): Promise<OnlineClient> {
     const client = new OnlineClient();
+    // Track even a connecting socket so leaving the panel cancels the attempt rather
+    // than creating a hidden room after a long free-host cold start.
+    this.client = client;
     await client.connect(resolveServerUrl());
+    if (this.destroyed || this.client !== client) {
+      client.disconnect();
+      throw new Error('Connection cancelled.');
+    }
     client.setCallbacks({
       onLobby: (lobby) => this.renderLobby(lobby),
       onMatchStarted: (match) => {
@@ -144,6 +163,7 @@ export class OnlinePanel {
   private fail(error: unknown): void {
     this.client?.disconnect();
     this.client = undefined;
+    if (this.destroyed) return;
     this.renderEntry(error instanceof Error ? error.message : 'Something went wrong.');
   }
 

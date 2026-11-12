@@ -4,7 +4,44 @@ Arc & Armor is an original two-player, turn-based artillery game for the web. Th
 
 This repository implements **Milestone 0** plus a playable local combat vertical slice from the [development plan](plan.md). It includes an arcade menu, local setup, weapon catalog/draft, responsive Phaser battlefield, terrain-following tank movement, aiming, swept projectile combat, destructible/additive terrain, alternating turns, inventory, original audio, pause/help and saved preferences. Normal play now uses only **60 Original + Deluxe reference weapons**, with original HP-based behavior adaptations. Fourteen tank choices include refined reference-inspired silhouettes and separately rotating barrels. Dedicated results flow, broader balance/qualification and online multiplayer remain later work; the local release gate is not yet passed.
 
-## Hosting and the "Create room does nothing" report — latest, 2026-11-12
+## Public multiplayer deployment — latest, 2026-11-12
+
+- **Play:** <https://arc-armour.vercel.app>
+- **Authoritative server:** `wss://arc-armour-server.onrender.com/`
+- **Health:** <https://arc-armour-server.onrender.com/health>
+- **Server dashboard:** <https://dashboard.render.com/web/srv-dbqnqtajnfac7398tf40>
+
+The persistent Node server now runs on Render's **free** plan (Oregon, Node 22, one instance,
+protocol v3). `VITE_MULTIPLAYER_URL` is configured on the Vercel project for Production and
+Preview, so Create Room / Join Room use Render without any `?server=` parameter. Both hosts
+are connected to the GitHub repository and auto-deploy from `main`. Room state is in memory;
+server restarts/redeploys clear rooms. No database or paid plan was provisioned.
+
+Public-network testing also exposed two reconnection timing hazards that localhost tests
+missed: a fresh WebSocket welcome could overwrite the held-seat token, and Render's proxy
+could forward a reconnect before delivering the old transport's close event. The client now
+rotates its token only after successful resume; the server can authenticate the original
+secret against a still-connected session, retire that transport, and resume the same seat.
+Wrong-token requests never evict a player. Regressions are covered by
+[OnlineReconnect.test.ts](apps/client/src/online/OnlineReconnect.test.ts) and
+[Reliability.test.ts](apps/server/tests/Reliability.test.ts).
+
+Render free hosting sleeps after inactivity. Initial Render connections have a **90-second**
+wake-up budget and a visible notice; other hosts and reconnect attempts retain the fast
+6-second budget. Exiting the online panel cancels an in-progress connection.
+
+Reproduce the public-host checks with:
+
+```sh
+node scripts/check-live-online.mjs
+```
+
+The script uses two isolated browser contexts on the real Vercel URL with no server override;
+it checks create/invite/join/ready, matching terrain, two alternating shots, crater/health
+synchronization and transport resumption. See [deployment instructions](deploy/README.md).
+Earlier sections below are historical checkpoints, not the current hosting status.
+
+## Hosting and the "Create room does nothing" report — earlier, 2026-11-12
 
 The client is live at <https://arc-armour.vercel.app> (Vercel, auto-deploys from `main`;
 [vercel.json](vercel.json)). User report: **Create room** on the live site had no response.

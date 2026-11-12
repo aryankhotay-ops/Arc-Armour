@@ -196,8 +196,10 @@ export class GameServer {
     const parsed = parseClientCommand(raw);
     if (!parsed.ok) {
       const seq =
-        typeof raw === 'object' && raw !== null && typeof (raw as { seq?: unknown }).seq === 'number'
-          ? ((raw as { seq: number }).seq)
+        typeof raw === 'object' &&
+        raw !== null &&
+        typeof (raw as { seq?: unknown }).seq === 'number'
+          ? (raw as { seq: number }).seq
           : -1;
       return reject(seq, parsed.reason);
     }
@@ -212,11 +214,31 @@ export class GameServer {
         return send(serverEvent({ type: 'pong', seq: command.seq, sentAt: command.sentAt }));
       case 'reconnect': {
         if (session.room !== undefined)
-          return send(serverEvent({ type: 'rejected', seq: command.seq, reason: 'already-in-room' }));
+          return send(
+            serverEvent({ type: 'rejected', seq: command.seq, reason: 'already-in-room' }),
+          );
         const room = this.rooms.get(command.roomCode);
+        // A TLS proxy may forward the NEW connection before reporting closure of the
+        // old transport. Authenticate against that still-live session's secret before
+        // moving it into the held-seat path. Never evict by room code/slot alone, and
+        // leave lobby departure semantics unchanged.
+        if (room !== undefined && room.phase !== 'lobby') {
+          const previous = [...this.sessions.values()].find(
+            (candidate) =>
+              candidate.id !== session.id &&
+              candidate.room === room &&
+              candidate.resumeToken === command.resumeToken,
+          );
+          if (previous !== undefined) {
+            this.drop(previous.id);
+            previous.socket.close();
+          }
+        }
         const resumed = room?.resume(session.client, command.resumeToken);
         if (room === undefined || resumed === undefined)
-          return send(serverEvent({ type: 'rejected', seq: command.seq, reason: 'invalid-resume' }));
+          return send(
+            serverEvent({ type: 'rejected', seq: command.seq, reason: 'invalid-resume' }),
+          );
         session.room = room;
         return send(
           serverEvent({
@@ -234,7 +256,9 @@ export class GameServer {
       }
       case 'create-room': {
         if (session.room !== undefined)
-          return send(serverEvent({ type: 'rejected', seq: command.seq, reason: 'already-in-room' }));
+          return send(
+            serverEvent({ type: 'rejected', seq: command.seq, reason: 'already-in-room' }),
+          );
         const room = new ArtilleryRoom(
           this.newRoomCode(),
           randomInt(0, 2 ** 31),
@@ -252,10 +276,14 @@ export class GameServer {
       }
       case 'join-room': {
         if (session.room !== undefined)
-          return send(serverEvent({ type: 'rejected', seq: command.seq, reason: 'already-in-room' }));
+          return send(
+            serverEvent({ type: 'rejected', seq: command.seq, reason: 'already-in-room' }),
+          );
         const room = this.rooms.get(command.roomCode);
         if (room === undefined)
-          return send(serverEvent({ type: 'rejected', seq: command.seq, reason: 'room-not-found' }));
+          return send(
+            serverEvent({ type: 'rejected', seq: command.seq, reason: 'room-not-found' }),
+          );
         session.client.name = command.name;
         const slot = room.join(session.client);
         if (slot === undefined)

@@ -141,9 +141,7 @@ describe('duplicate and unauthorized commands', () => {
       if (next < 0) break;
       applied.push(host.inbox.splice(next, 1)[0]!);
     }
-    expect(applied.filter((e) => (e.command as { type: string }).type === 'fire')).toHaveLength(
-      1,
-    );
+    expect(applied.filter((e) => (e.command as { type: string }).type === 'fire')).toHaveLength(1);
   });
 
   it('rejects a delayed fire from an earlier turn as stale-turn', async () => {
@@ -177,6 +175,49 @@ describe('duplicate and unauthorized commands', () => {
 });
 
 describe('disconnect grace and reconnection', () => {
+  it('authenticates a replacement before a proxy reports the original transport closed', async () => {
+    const { host, guest, roomCode } = await startMatch();
+    const aim = host.send({ type: 'aim', angleDegrees: 55, power: 0.4 });
+    await host.waitFor((e) => e.type === 'ack' && e.seq === aim);
+    // Do NOT close the guest socket. This is how the backend sees a delayed proxy close.
+    const replacement = await newClient();
+    const seq = replacement.send({
+      type: 'reconnect',
+      roomCode,
+      resumeToken: guest.resumeToken,
+    });
+    const resumed = await replacement.waitFor((e) => e.type === 'resumed' && e.seq === seq);
+    expect(resumed.slot).toBe('player2');
+    expect(resumed.phase).toBe('playing');
+    expect((resumed.commandLog as unknown[]).length).toBeGreaterThan(0);
+    await expect.poll(() => guest.socket.readyState).toBe(WebSocket.CLOSED);
+
+    // A delayed close from the replaced transport must not drop the new seat. Its token
+    // has now rotated too: another replacement authenticates with the NEW welcome token.
+    const third = await newClient();
+    const seq2 = third.send({
+      type: 'reconnect',
+      roomCode,
+      resumeToken: replacement.resumeToken,
+    });
+    expect((await third.waitFor((e) => e.type === 'resumed' && e.seq === seq2)).slot).toBe(
+      'player2',
+    );
+    await expect.poll(() => replacement.socket.readyState).toBe(WebSocket.CLOSED);
+  });
+
+  it('cannot evict a still-connected player using a wrong resume token', async () => {
+    const { guest, roomCode } = await startMatch();
+    const intruder = await newClient();
+    const seq = intruder.send({ type: 'reconnect', roomCode, resumeToken: 'wrong-token' });
+    expect((await intruder.waitFor((e) => e.type === 'rejected' && e.seq === seq)).reason).toBe(
+      'invalid-resume',
+    );
+    expect(guest.socket.readyState).toBe(WebSocket.OPEN);
+    const ping = guest.send({ type: 'ping', sentAt: 123 });
+    expect((await guest.waitFor((e) => e.type === 'pong' && e.seq === ping)).sentAt).toBe(123);
+  });
+
   it('holds the seat through a transport drop and resumes with the full command log', async () => {
     const { host, guest, roomCode } = await startMatch();
     const token = guest.resumeToken;
@@ -274,9 +315,7 @@ describe('complete online gameplay cycle with rematch', () => {
       for (let round = 0; round < 24; round++) {
         const hostTurn = round % 2 === 0;
         const active = hostTurn ? host : guest;
-        const aim = hostTurn
-          ? { angleDegrees: 45, power: 0.89 }
-          : { angleDegrees: 60, power: 0.3 };
+        const aim = hostTurn ? { angleDegrees: 45, power: 0.89 } : { angleDegrees: 60, power: 0.3 };
         const aimSeq = active.send({ type: 'aim', ...aim });
         await active.waitFor((e) => e.type === 'ack' && e.seq === aimSeq);
         const fireSeq = active.send({ type: 'fire', turn: round + 1 });
@@ -304,9 +343,9 @@ describe('complete online gameplay cycle with rematch', () => {
 
     // Firing after the match is over is rejected (results are final).
     const postFire = host.send({ type: 'fire', turn: 99 });
-    expect(
-      (await host.waitFor((e) => e.type === 'rejected' && e.seq === postFire)).reason,
-    ).toBe('not-accepting-input');
+    expect((await host.waitFor((e) => e.type === 'rejected' && e.seq === postFire)).reason).toBe(
+      'not-accepting-input',
+    );
 
     // ---- Rematch voting: one vote is not enough; both votes restart the match.
     const hostVote = host.send({ type: 'rematch' });

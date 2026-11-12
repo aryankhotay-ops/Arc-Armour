@@ -115,6 +115,20 @@ const RECONNECT_DELAYS_MS = [400, 800, 1600, 3200, 5000, 5000, 5000, 5000];
 /** Initial handshake budget; browsers otherwise sit silently for 10s+ on a dead host. */
 const CONNECT_TIMEOUT_MS = 6000;
 
+/**
+ * Render free services can sleep between matches and need about a minute to start.
+ * Only the INITIAL handshake gets that budget. Reconnects must stay inside the server's
+ * 30-second seat grace; other hosts keep the existing fast failure.
+ */
+export const connectionTimeoutMs = (url: string, isReconnect = false): number => {
+  try {
+    if (!isReconnect && new URL(url).hostname.endsWith('.onrender.com')) return 90000;
+  } catch {
+    // The WebSocket constructor reports invalid URLs; keep the normal budget here.
+  }
+  return CONNECT_TIMEOUT_MS;
+};
+
 /** Human-readable server location for connection errors (scheme + host, no path/query). */
 const describeServer = (url: string): string => {
   try {
@@ -148,6 +162,8 @@ export class OnlineClient {
   public latencyMs: number | undefined;
   public closed = false;
   private resumeToken: string | undefined;
+  /** A reconnect transport has its own token; don't adopt it until the old seat resumes. */
+  private replacementResumeToken: string | undefined;
   private pinger: ReturnType<typeof setInterval> | undefined;
   private reconnectAttempt = 0;
   private intentionalClose = false;
@@ -172,11 +188,14 @@ export class OnlineClient {
         return;
       }
       const socket = this.socket;
-      const timer = setTimeout(() => {
-        if (settled || socket !== this.socket) return;
-        // Closing fires the 'close' listener below, which rejects with the reach error.
-        socket.close();
-      }, CONNECT_TIMEOUT_MS);
+      const timer = setTimeout(
+        () => {
+          if (settled || socket !== this.socket) return;
+          // Closing fires the 'close' listener below, which rejects with the reach error.
+          socket.close();
+        },
+        connectionTimeoutMs(url, isReconnect),
+      );
       socket.addEventListener('message', (event) => this.receive(String(event.data)));
       socket.addEventListener('open', () => {
         clearTimeout(timer);
@@ -265,6 +284,10 @@ export class OnlineClient {
             this.callbacks.onClosed?.();
             return;
           }
+          // The server will associate any future disconnect with this NEW session's
+          // token, but the reconnect request above must authenticate with the OLD one.
+          this.resumeToken = this.replacementResumeToken ?? this.resumeToken;
+          this.replacementResumeToken = undefined;
           this.lobby = { roomCode: event.roomCode, slot: event.slot, players: event.players };
           if (event.snapshot !== null) this.latestSnapshot = event.snapshot;
           // Mirror replay starts from scratch; reset ordered delivery to the log head.
@@ -375,6 +398,7 @@ export class OnlineClient {
     this.lobby = undefined;
     this.matchStart = undefined;
     this.resumeToken = undefined;
+    this.replacementResumeToken = undefined;
     await this.request({ type: 'leave-room' }).catch(() => undefined);
   }
 
@@ -444,7 +468,14 @@ export class OnlineClient {
         return;
       }
       case 'welcome':
-        this.resumeToken = event.resumeToken;
+        // On a public network the fresh welcome can arrive before open().then resumes.
+        // Overwriting the saved token here makes the reconnect request authenticate with
+        // a new, unseated session instead of the held seat. Rotate only AFTER 'resumed'.
+        if (this.lobby !== undefined && this.resumeToken !== undefined) {
+          this.replacementResumeToken = event.resumeToken;
+        } else {
+          this.resumeToken = event.resumeToken;
+        }
         return;
       case 'lobby': {
         if (this.lobby !== undefined) {

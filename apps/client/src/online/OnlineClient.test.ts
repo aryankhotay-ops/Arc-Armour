@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveServerUrl, serverConfigured, type ServerLocation } from './OnlineClient';
+import {
+  connectionTimeoutMs,
+  resolveServerUrl,
+  serverConfigured,
+  type ServerLocation,
+} from './OnlineClient';
 
 const at = (hostname: string, protocol = 'https:', search = ''): ServerLocation => ({
   hostname,
@@ -12,6 +17,13 @@ const at = (hostname: string, protocol = 'https:', search = ''): ServerLocation 
 // build has no VITE_MULTIPLAYER_URL (vitest leaves it undefined too), so the cases below
 // exercise the same-host fallback and the explicit override paths.
 describe('multiplayer server resolution', () => {
+  it('allows Render cold starts only on the initial connection, not seat reconnections', () => {
+    expect(connectionTimeoutMs('wss://arc-armour-server.onrender.com/')).toBe(90000);
+    expect(connectionTimeoutMs('wss://arc-armour-server.onrender.com/', true)).toBe(6000);
+    expect(connectionTimeoutMs('wss://play.example.com/')).toBe(6000);
+    expect(connectionTimeoutMs('wss://onrender.com.attacker.example/')).toBe(6000);
+  });
+
   it('treats local development hosts as configured (same-host default server)', () => {
     expect(serverConfigured(at('localhost', 'http:'))).toBe(true);
     expect(serverConfigured(at('127.0.0.1', 'http:'))).toBe(true);
