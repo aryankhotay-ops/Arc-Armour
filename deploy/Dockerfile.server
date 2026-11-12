@@ -1,0 +1,25 @@
+# Authoritative Arc & Armor multiplayer server. Any host that runs containers with
+# long-lived WebSockets works (Fly.io, Railway, Render Docker runtime, a VPS).
+#   docker build -f deploy/Dockerfile.server -t arc-armour-server .
+#   docker run -p 8090:8090 -e PORT=8090 arc-armour-server
+FROM node:22-alpine AS build
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@10.20.0 --activate
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY apps/server/package.json apps/server/
+COPY packages/content/package.json packages/content/
+COPY packages/protocol/package.json packages/protocol/
+COPY packages/simulation/package.json packages/simulation/
+RUN pnpm install --frozen-lockfile --filter @artillery/server...
+COPY apps/server apps/server
+COPY packages packages
+RUN pnpm --filter @artillery/server build
+
+FROM node:22-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app/apps/server/dist/server.mjs ./server.mjs
+EXPOSE 8090
+HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- "http://127.0.0.1:${PORT:-8090}/health" || exit 1
+USER node
+CMD ["node", "server.mjs"]

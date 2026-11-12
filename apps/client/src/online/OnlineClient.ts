@@ -53,16 +53,46 @@ export interface OnlineCallbacks {
   readonly onClosed?: () => void;
 }
 
-/** Resolves the server URL: explicit ?server= param, env override, then same-host default. */
-export const resolveServerUrl = (search = window.location.search): string => {
+/** The parts of `window.location` the server-URL rules depend on; injectable for tests. */
+export interface ServerLocation {
+  readonly search: string;
+  readonly hostname: string;
+  readonly protocol: string;
+}
+
+const currentLocation = (): ServerLocation => window.location;
+
+const explicitServer = (search: string): string | undefined => {
   const param = new URLSearchParams(search).get('server');
-  if (param !== null && /^wss?:\/\//.test(param)) return param;
+  return param !== null && /^wss?:\/\//.test(param) ? param : undefined;
+};
+
+const builtInServer = (): string | undefined => {
   const env = (import.meta as { env?: Record<string, string | undefined> }).env;
   const configured = env?.VITE_MULTIPLAYER_URL;
-  if (configured !== undefined && configured !== '') return configured;
-  const secure = window.location.protocol === 'https:';
-  return `${secure ? 'wss' : 'ws'}://${window.location.hostname}:8090/`;
+  return configured !== undefined && configured !== '' ? configured : undefined;
 };
+
+const isLoopback = (hostname: string): boolean =>
+  hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' || hostname === '';
+
+/** Resolves the server URL: explicit ?server= param, env override, then same-host default. */
+export const resolveServerUrl = (location: ServerLocation = currentLocation()): string => {
+  const explicit = explicitServer(location.search) ?? builtInServer();
+  if (explicit !== undefined) return explicit;
+  const secure = location.protocol === 'https:';
+  return `${secure ? 'wss' : 'ws'}://${location.hostname}:8090/`;
+};
+
+/**
+ * Whether this page knows a real multiplayer server. The same-host:8090 default only
+ * makes sense during local development; a static deployment (e.g. Vercel) without
+ * VITE_MULTIPLAYER_URL or ?server= has nothing to connect to and should say so.
+ */
+export const serverConfigured = (location: ServerLocation = currentLocation()): boolean =>
+  explicitServer(location.search) !== undefined ||
+  builtInServer() !== undefined ||
+  isLoopback(location.hostname);
 
 /** Invitation link that lands a friend directly in the join flow for this room. */
 export const inviteLink = (roomCode: string): string => {
@@ -82,6 +112,18 @@ export const pendingJoinCode = (search = window.location.search): string | undef
 
 const PING_INTERVAL_MS = 2000;
 const RECONNECT_DELAYS_MS = [400, 800, 1600, 3200, 5000, 5000, 5000, 5000];
+/** Initial handshake budget; browsers otherwise sit silently for 10s+ on a dead host. */
+const CONNECT_TIMEOUT_MS = 6000;
+
+/** Human-readable server location for connection errors (scheme + host, no path/query). */
+const describeServer = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return url;
+  }
+};
 
 export class OnlineClient {
   private socket: WebSocket | undefined;
@@ -130,8 +172,14 @@ export class OnlineClient {
         return;
       }
       const socket = this.socket;
+      const timer = setTimeout(() => {
+        if (settled || socket !== this.socket) return;
+        // Closing fires the 'close' listener below, which rejects with the reach error.
+        socket.close();
+      }, CONNECT_TIMEOUT_MS);
       socket.addEventListener('message', (event) => this.receive(String(event.data)));
       socket.addEventListener('open', () => {
+        clearTimeout(timer);
         settled = true;
         this.setStatus('connected');
         this.reconnectAttempt = 0;
@@ -153,14 +201,19 @@ export class OnlineClient {
       );
       const fail = (): void => {
         if (socket !== this.socket) return; // superseded by a newer socket
+        clearTimeout(timer);
         this.stopPinger();
-        for (const waiter of this.waiters.values())
-          waiter.reject(new Error('Connection closed.'));
+        for (const waiter of this.waiters.values()) waiter.reject(new Error('Connection closed.'));
         this.waiters.clear();
         if (!settled) {
           settled = true;
           this.setStatus('closed');
-          reject(new Error('Could not reach the multiplayer server.'));
+          reject(
+            new Error(
+              `Could not reach the multiplayer server at ${describeServer(url)}. ` +
+                'Check that it is running and reachable, then try again.',
+            ),
+          );
           return;
         }
         if (this.intentionalClose) {

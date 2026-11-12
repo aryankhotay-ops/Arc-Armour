@@ -4,7 +4,43 @@ Arc & Armor is an original two-player, turn-based artillery game for the web. Th
 
 This repository implements **Milestone 0** plus a playable local combat vertical slice from the [development plan](plan.md). It includes an arcade menu, local setup, weapon catalog/draft, responsive Phaser battlefield, terrain-following tank movement, aiming, swept projectile combat, destructible/additive terrain, alternating turns, inventory, original audio, pause/help and saved preferences. Normal play now uses only **60 Original + Deluxe reference weapons**, with original HP-based behavior adaptations. Fourteen tank choices include refined reference-inspired silhouettes and separately rotating barrels. Dedicated results flow, broader balance/qualification and online multiplayer remain later work; the local release gate is not yet passed.
 
-## Workspace port and porting-bug fixes — latest, 2026-11-12
+## Hosting and the "Create room does nothing" report — latest, 2026-11-12
+
+The client is live at <https://arc-armour.vercel.app> (Vercel, auto-deploys from `main`;
+[vercel.json](vercel.json)). User report: **Create room** on the live site had no response.
+
+**Root cause — not a client bug, a missing server.** Vercel hosts only the static client.
+Without `VITE_MULTIPLAYER_URL` the client falls back to `wss://<same-host>:8090/`, i.e.
+`wss://arc-armour.vercel.app:8090/`, where nothing listens. The browser's WebSocket handshake
+sat silent for ~10 s before failing, and the form gave no feedback in the meantime, so the
+button looked dead. The authoritative server ([apps/server](apps/server)) needs a persistent
+Node host with long-lived WebSockets, which Vercel does not provide.
+
+**Fixes shipped:**
+
+- **Instant feedback:** the submit button becomes "Connecting…" and both forms lock on click
+  ([OnlinePanel.ts](apps/client/src/online/OnlinePanel.ts)); everything unlocks on failure.
+- **Fast, specific failure:** a 6 s handshake budget replaces the browser's silent wait, and the
+  error names the resolved address, e.g. `Could not reach the multiplayer server at
+  wss://arc-armour.vercel.app:8090` ([OnlineClient.ts](apps/client/src/online/OnlineClient.ts)).
+- **Honest unconfigured notice:** when the page is not on localhost and has neither
+  `VITE_MULTIPLAYER_URL` nor `?server=`, the ONLINE panel says no server is configured and how
+  to supply one. Server resolution now takes an injectable location and is unit-tested
+  ([OnlineClient.test.ts](apps/client/src/online/OnlineClient.test.ts)).
+- **Server deployability:** `apps/server/src/main.ts` binds `0.0.0.0` whenever a PaaS injects
+  `PORT`; [render.yaml](render.yaml) is a one-click Render Blueprint (free plan, `/health`
+  probe); [deploy/Dockerfile.server](deploy/Dockerfile.server) covers any container host.
+  Step-by-step instructions in [deploy/README.md](deploy/README.md).
+
+**To turn online play on:** deploy `render.yaml` on Render, then set
+`VITE_MULTIPLAYER_URL=wss://<service>.onrender.com/` in the Vercel project and redeploy. Until
+then, `?server=wss://…` on the URL works for ad-hoc testing.
+
+**Verified:** lint/typecheck/build, 513 unit tests, and 17/17 menu + online browser checks
+(including the new instant-busy/fast-fail assertions); `PORT=8777 node server.mjs` binds
+`0.0.0.0`.
+
+## Workspace port and porting-bug fixes — earlier, 2026-11-12
 
 The project moved from `starter/artillery-game` into its own workspace (`game/`). A full
 re-validation from a clean install surfaced three problems, all fixed:

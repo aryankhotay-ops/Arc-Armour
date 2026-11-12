@@ -174,7 +174,11 @@ export class OnlineMirrorEngine extends GameEngine {
       }
     }
     // Settle any trailing shot so the mirror lands on the same turn as the server.
-    for (let tick = 0; tick < 3600 && !this.acceptsInput && this.state.phase !== 'game-over'; tick++) {
+    for (
+      let tick = 0;
+      tick < 3600 && !this.acceptsInput && this.state.phase !== 'game-over';
+      tick++
+    ) {
       this.update(1 / 60);
     }
     this.drainEvents();

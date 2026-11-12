@@ -1,0 +1,18 @@
+# Render Blueprint: the authoritative multiplayer WebSocket server.
+# The browser client is hosted separately on Vercel (see vercel.json); point it at this
+# service with VITE_MULTIPLAYER_URL=wss://<service>.onrender.com/ at build time.
+services:
+  - type: web
+    name: arc-armour-server
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    healthCheckPath: /health
+    buildCommand: corepack enable && corepack prepare pnpm@10.20.0 --activate && pnpm install --frozen-lockfile && pnpm --filter @artillery/server build
+    startCommand: node apps/server/dist/server.mjs
+    envVars:
+      - key: NODE_VERSION
+        value: 22.21.1
+      - key: GRACE_SECONDS
+        value: '30'

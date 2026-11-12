@@ -1,5 +1,11 @@
 import type { LobbyView, MatchStart } from './OnlineClient';
-import { OnlineClient, inviteLink, pendingJoinCode, resolveServerUrl } from './OnlineClient';
+import {
+  OnlineClient,
+  inviteLink,
+  pendingJoinCode,
+  resolveServerUrl,
+  serverConfigured,
+} from './OnlineClient';
 
 // Native DOM lobby for online play, mounted inside the main menu's ONLINE panel.
 // Owns create/join forms, the shareable room code + invitation link, player list with
@@ -41,8 +47,15 @@ export class OnlinePanel {
   // -------------------------------------------------------------------------------------
 
   private renderEntry(error?: string): void {
+    const unconfigured = !serverConfigured();
+    delete this.root.dataset.onlineBusy;
     this.root.innerHTML = `
       ${error === undefined ? '' : `<p class="front-note" role="alert" data-online-error>${escapeText(error)}</p>`}
+      ${
+        unconfigured && error === undefined
+          ? `<p class="front-note" role="status" data-online-unconfigured>No multiplayer server is configured for this build yet, so rooms cannot be created from here. The host can set <code>VITE_MULTIPLAYER_URL</code> at build time, or you can open this page with <code>?server=wss://your-server</code>.</p>`
+          : ''
+      }
       <form data-form="online-create" class="front-online-form">
         <h3>Create a private room</h3>
         <label>Your name<input name="name" maxlength="24" required value="Player 1" aria-label="Your name"></label>
@@ -61,10 +74,29 @@ export class OnlinePanel {
         if (!form.reportValidity()) return;
         const data = new FormData(form);
         const name = String(data.get('name') ?? 'Player');
+        this.setBusy(form);
         if (form.dataset.form === 'online-create') void this.create(name);
         else void this.join(String(data.get('roomCode') ?? ''), name);
       }),
     );
+  }
+
+  /**
+   * Immediate feedback for the click: the connection attempt is asynchronous and can take
+   * seconds to fail, so without this the button looks dead. Both forms lock to prevent a
+   * second socket racing the first; renderEntry/renderLobby replace the whole panel after.
+   */
+  private setBusy(form: HTMLFormElement): void {
+    this.root.querySelectorAll<HTMLButtonElement>('button').forEach((button) => {
+      button.disabled = true;
+    });
+    const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (submit !== null) {
+      submit.dataset.busy = 'true';
+      submit.textContent = 'Connecting…';
+      submit.setAttribute('aria-busy', 'true');
+    }
+    this.root.dataset.onlineBusy = 'true';
   }
 
   private async connect(): Promise<OnlineClient> {
@@ -116,6 +148,7 @@ export class OnlinePanel {
   }
 
   private renderLobby(lobby: LobbyView): void {
+    delete this.root.dataset.onlineBusy;
     const link = inviteLink(lobby.roomCode);
     const me = lobby.players.find((player) => player.slot === lobby.slot);
     const rows = (['player1', 'player2'] as const)

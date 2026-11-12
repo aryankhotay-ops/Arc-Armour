@@ -43,7 +43,9 @@ test('keyboard arrows, enter, space, tab focus wrap and Escape all work', async 
   await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('button', { name: 'Online multiplayer', exact: true })).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Create a private room' })).toBeVisible();
+  await expect(
+    page.getByRole('dialog').getByRole('heading', { name: 'Create a private room' }),
+  ).toBeVisible();
   await page.keyboard.press('Escape');
   await page.keyboard.press('End');
   await expect(page.getByRole('button', { name: 'Credits', exact: true })).toBeFocused();
@@ -186,9 +188,20 @@ test('online destination offers the lobby without opening sockets until requeste
   // With no server running, creating a room reports the failure without crashing the menu.
   await dialog.getByRole('button', { name: 'Back to main menu' }).click();
   await page.getByRole('button', { name: 'Online multiplayer', exact: true }).click();
-  await dialog.getByRole('button', { name: 'Create room', exact: false }).click();
+  // Dev server runs on localhost, which counts as "configured" (same-host default).
+  await expect(dialog.locator('[data-online-unconfigured]')).toHaveCount(0);
+  const create = dialog.getByRole('button', { name: 'Create room', exact: false });
+  await create.click();
+  // The click is acknowledged instantly: the button shows progress and every action locks
+  // so a second socket cannot race the first — previously it looked dead for ~10 seconds.
+  await expect(dialog.locator('button[data-busy="true"]')).toHaveText('Connecting…');
+  await expect(dialog.getByRole('button', { name: 'Join room', exact: false })).toBeDisabled();
   await expect(dialog.locator('[data-online-error]')).toBeVisible({ timeout: 10000 });
+  await expect(dialog.locator('[data-online-error]')).toContainText('Could not reach');
+  await expect(dialog.locator('[data-online-error]')).toContainText('ws://');
   await expect(dialog.getByRole('heading', { name: 'Create a private room' })).toBeVisible();
+  // Everything unlocks again for a retry.
+  await expect(dialog.getByRole('button', { name: 'Create room', exact: false })).toBeEnabled();
 });
 
 test('menu settings persist, propagate into battle and can be restored', async ({ page }) => {
