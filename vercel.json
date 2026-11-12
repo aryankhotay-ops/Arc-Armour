@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "corepack enable && corepack prepare pnpm@10.20.0 --activate && pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @artillery/client build",
+  "outputDirectory": "apps/client/dist",
+  "rewrites": [{ "source": "/((?!assets/).*)", "destination": "/index.html" }],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    }
+  ]
+}

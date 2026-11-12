@@ -1,0 +1,157 @@
+.tank-picker {
+  margin: 24px 0;
+  padding: 16px;
+  border: 1px solid #766486;
+  border-radius: 12px;
+  background: #14192c;
+  color: #f8edda;
+}
+.tank-picker h3 {
+  margin: 0 0 8px;
+  color: #ffdf99;
+}
+.tank-picker-note {
+  font-size: 12px;
+  color: #bcb9c7;
+  line-height: 1.6;
+}
+.tank-preview-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.tank-preview-pair article {
+  min-width: 0;
+  background: linear-gradient(#334139, #17241f);
+  border: 1px solid #667469;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+.tank-preview-pair strong {
+  display: block;
+  font: 11px monospace;
+  color: #ffd166;
+}
+.tank-preview-pair article:nth-child(2) strong {
+  color: #9cd3ff;
+}
+.tank-preview-pair svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.tank-preview-pair b {
+  display: block;
+  font-size: 14px;
+}
+.tank-preview-aim {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  margin: 12px 0;
+  min-height: 48px;
+}
+.tank-preview-aim input {
+  min-width: 120px;
+  width: auto;
+  flex: 1;
+  height: 48px;
+  accent-color: #ffd166;
+  touch-action: none;
+}
+.tank-preview-aim output {
+  min-width: 35px;
+}
+.tank-player-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0;
+}
+.tank-player-tabs button {
+  flex: 1;
+  min-height: 48px;
+  border: 1px solid #777d80;
+  border-radius: 8px;
+  background: #283341;
+  color: #e0e7e8;
+  padding: 8px;
+  font-size: 12px;
+}
+.tank-player-tabs button[aria-pressed='true'] {
+  border-color: #ffd166;
+  background: #504535;
+  color: #ffe1a0;
+}
+.tank-roster {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.tank-roster[hidden] {
+  display: none;
+}
+.tank-roster legend {
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.tank-option {
+  position: relative;
+  min-width: 0;
+  min-height: 92px;
+  display: block;
+  border: 1px solid #586861;
+  border-radius: 8px;
+  padding: 6px;
+  background: #2e3931;
+  cursor: pointer;
+  text-align: center;
+}
+.tank-option:has(input:checked) {
+  border-color: #ffd166;
+  box-shadow: inset 0 0 0 1px #ffd166;
+  background: #484532;
+}
+.tank-option:focus-within {
+  outline: 3px solid #9cd3ff;
+  outline-offset: 2px;
+}
+.tank-option input {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  accent-color: #ffd166;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.tank-option img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 224/138;
+  object-fit: contain;
+}
+.tank-option b {
+  display: block;
+  font-size: 11px;
+}
+@media (max-width: 480px) {
+  .tank-picker {
+    padding: 10px;
+  }
+  .tank-roster {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tank-preview-pair {
+    gap: 6px;
+  }
+  .tank-player-tabs button {
+    font-size: 11px;
+  }
+}

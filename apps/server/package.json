@@ -1,0 +1,24 @@
+{
+  "name": "@artillery/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Authoritative Node.js multiplayer server for Arc & Armor. Runs the shared deterministic simulation; clients send intents only.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --outfile=dist/server.mjs",
+    "start": "node dist/server.mjs"
+  },
+  "dependencies": {
+    "@artillery/content": "workspace:*",
+    "@artillery/protocol": "workspace:*",
+    "@artillery/simulation": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3"
+  }
+}

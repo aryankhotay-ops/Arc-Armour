@@ -1,0 +1,170 @@
+.responsive-draft {
+  display: none;
+}
+@media (min-width: 0px) {
+  body:has(.responsive-draft.large-pool) .draft-home {
+    display: none;
+  }
+  .responsive-draft {
+    position: fixed;
+    z-index: 10;
+    inset: 0;
+    height: 100%;
+    height: 100dvh;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    display: none;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    background: linear-gradient(140deg, #30265cf5, #100c23f8);
+    color: #fff6e6;
+    overflow: hidden;
+  }
+  .responsive-draft header {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: center;
+  }
+  .responsive-draft h1 {
+    font-size: 16px;
+    color: #ffd166;
+    margin: 0 0 4px;
+  }
+  .responsive-draft [role='status'] {
+    font-size: 13px;
+    color: #a5d6ff;
+  }
+  .responsive-draft[data-picker='player1'] [role='status'] {
+    color: #ffd166;
+  }
+  .responsive-draft [data-progress] {
+    font-size: 12px;
+    margin: 4px 0;
+    color: #bab2e2;
+  }
+  .responsive-draft button {
+    min-height: 48px;
+    min-width: 48px;
+    border: 1px solid #8a80e0;
+    border-radius: 10px;
+    padding: 8px;
+    background: linear-gradient(#4a3f96, #29234f);
+    color: #fff6e6;
+    font-size: 13px;
+    font-weight: bold;
+    font-family: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .responsive-draft button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .responsive-draft button:focus-visible,
+  .responsive-draft summary:focus-visible,
+  .responsive-draft-content:focus-visible {
+    outline: 3px solid #ffd166;
+    outline-offset: -3px;
+  }
+  .responsive-draft-content {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 3px;
+    font-size: 13px;
+  }
+  .responsive-draft-content > p {
+    color: #bab2e2;
+    margin: 4px 0;
+  }
+  .responsive-draft summary {
+    min-height: 48px;
+    padding: 12px 4px;
+    color: #8fe9ff;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .responsive-draft-rosters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .responsive-draft-rosters p {
+    white-space: pre-line;
+    line-height: 1.6;
+    border: 1px solid #6d60ad;
+    padding: 8px;
+    border-radius: 8px;
+    margin: 0 0 8px;
+  }
+  .responsive-draft-pool {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    gap: 8px;
+  }
+  .responsive-draft-pool button {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .responsive-draft-pool strong {
+    color: #ffd166;
+    font-size: 14px;
+  }
+  .responsive-draft-pool [data-role] {
+    color: #8fe9ff;
+    font-size: 12px;
+  }
+  .responsive-draft-pool [data-description] {
+    color: #e3dcf4;
+    font-size: 12px;
+    font-weight: normal;
+    line-height: 1.4;
+  }
+  .responsive-draft-pool [data-owner] {
+    font-size: 11px;
+  }
+  .responsive-draft-pool [data-owner='player1'] {
+    border-color: #ffd166;
+  }
+  .responsive-draft-pool [data-owner='player2'] {
+    border-color: #a5d6ff;
+  }
+  .responsive-draft footer {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .responsive-draft button.responsive-draft-start {
+    color: #17132e;
+    background: #ffd166;
+    border-color: #ffe5ab;
+  }
+}
+/* The 60-weapon roster always needs a scrollable native draft. The old 12-weapon fixture
+   retains canvas draft at desktop sizes for regression tests only. */
+.responsive-draft.large-pool {
+  display: grid;
+}
+@media (max-width: 1000px), (max-height: 600px) {
+  .responsive-draft {
+    display: grid;
+  }
+  .draft-home {
+    display: none;
+  }
+}
+@media (max-height: 600px) and (orientation: landscape) {
+  .responsive-draft footer {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .responsive-draft header h1 {
+    display: none;
+  }
+  .responsive-draft-content > p {
+    margin-top: 0;
+  }
+}

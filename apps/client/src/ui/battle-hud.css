@@ -1,0 +1,941 @@
+/* Pocket Tanks-style regions (reference supplied 2026-11-10): the battlefield fills the
+   whole top of the screen, player status floats OVER the map sky, and action controls sit
+   below the map. CSS pixels (not canvas-scaled hit targets): 48px controls, independently
+   scrolling arsenal/details, safe mobile viewport. Short landscape phones keep a right rail. */
+.battle-shell {
+  --active-color: #ffd166;
+  --edge-top: max(8px, env(safe-area-inset-top));
+  --edge-bottom: max(8px, env(safe-area-inset-bottom));
+  position: fixed;
+  top: var(--edge-top);
+  left: max(8px, env(safe-area-inset-left));
+  right: max(8px, env(safe-area-inset-right));
+  height: calc(100% - var(--edge-top) - var(--edge-bottom));
+  height: calc(100dvh - var(--edge-top) - var(--edge-bottom));
+  display: grid;
+  grid-template-areas: 'arena' 'dock';
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+.battle-shell #app {
+  grid-area: arena;
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  touch-action: none;
+}
+.battle-shell canvas {
+  border-radius: 12px;
+  box-shadow: 0 5px 28px #08041580;
+  -webkit-touch-callout: none;
+}
+.battle-hud-dock {
+  background: linear-gradient(160deg, #2d2558, #17132f 65%);
+  border: 1px solid #6d60ad;
+  border-radius: 14px;
+  box-shadow:
+    0 4px 0 #100c23,
+    inset 0 1px 0 #8a80e030;
+  color: #fff6e6;
+  min-width: 0;
+}
+/* Score strip floats over the battlefield sky; only its panels take pointer input, so
+   battlefield drag-aiming still works between them. Pure presentation, like the in-map
+   score bars of the reference game. */
+.battle-hud-top {
+  position: absolute;
+  z-index: 24;
+  top: var(--edge-top);
+  left: max(8px, env(safe-area-inset-left));
+  right: max(8px, env(safe-area-inset-right));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 1.1fr) minmax(0, 1fr) 80px;
+  gap: 12px;
+  align-items: start;
+  padding: 6px 8px;
+  pointer-events: none;
+  color: #fff6e6;
+  min-width: 0;
+}
+.battle-hud-top > * {
+  pointer-events: auto;
+}
+.hud-match {
+  background: #100c23b8;
+  border: 1px solid #6d60ad88;
+  border-radius: 10px;
+  padding: 4px 10px;
+  backdrop-filter: blur(2px);
+}
+.hud-player {
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid #4d4590;
+  border-radius: 9px;
+  background: #100c23c4;
+  backdrop-filter: blur(2px);
+}
+.hud-player[data-active='true'] {
+  border: 2px solid var(--player-color);
+  padding: 6px 9px;
+  box-shadow: inset 0 0 22px #ffffff08;
+}
+.hud-player-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 13px;
+}
+.hud-player-heading strong {
+  color: var(--player-color);
+}
+.hud-player-heading [data-activity] {
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.hud-player[data-active='true'] [data-activity] {
+  color: var(--player-color);
+}
+.hud-health-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 7px 0 5px;
+}
+.hud-health-row strong {
+  white-space: nowrap;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.hud-health-row progress {
+  min-width: 0;
+  width: 100%;
+  height: 10px;
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  appearance: none;
+  background: #080415;
+}
+.hud-health-row progress::-webkit-progress-bar {
+  background: #080415;
+}
+.hud-health-row progress::-webkit-progress-value {
+  background: linear-gradient(90deg, var(--player-color), #fff6e6);
+  border-radius: 8px;
+}
+.hud-health-row progress::-moz-progress-bar {
+  background: var(--player-color);
+}
+.hud-player[data-low-health='true'] progress::-webkit-progress-value {
+  background: #ff5d62;
+}
+.hud-player[data-low-health='true'] progress::-moz-progress-bar {
+  background: #ff5d62;
+}
+.hud-player-weapon {
+  color: #bab2e2;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hud-match {
+  text-align: center;
+  min-width: 0;
+}
+.hud-match-heading {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  font-size: 11px;
+  color: #bab2e2;
+  letter-spacing: 1px;
+}
+.hud-match-heading strong {
+  color: #ffd166;
+  white-space: nowrap;
+}
+.hud-status {
+  display: block;
+  font-size: 15px;
+  color: var(--active-color);
+  margin: 4px 0;
+}
+.battle-shell[data-phase='paused'] .hud-status {
+  color: #ffcc4d;
+}
+.battle-shell[data-phase='game-over'] .hud-status {
+  color: #7ee36b;
+}
+.hud-wind {
+  display: block;
+  color: #8fe9ff;
+  font-size: 12px;
+}
+.hud-message {
+  display: block;
+  font-size: 11px;
+  color: #bab2e2;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hud-orientation-hint {
+  display: none;
+  color: #bab2e2;
+  font-size: 11px;
+}
+.hud-menu-host .battle-menu-trigger {
+  position: static;
+  width: 100%;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 6px;
+}
+.battle-hud-dock {
+  grid-area: dock;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(440px, 1fr);
+  padding: 10px 12px;
+  gap: 16px;
+  max-height: 45dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.hud-arsenal,
+.hud-aim {
+  min-width: 0;
+  min-height: 0;
+}
+.hud-arsenal {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+.hud-aim {
+  border-left: 1px solid #4d4590;
+  padding-left: 16px;
+}
+.hud-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.hud-section-heading strong {
+  color: var(--active-color);
+  letter-spacing: 0.8px;
+}
+.hud-section-heading > span {
+  color: #bab2e2;
+  font-size: 10px;
+}
+.hud-weapon-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 3px 3px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #8a80e0 #17132e;
+  /* Contain horizontal edge swipes, but let vertical gestures chain to the arsenal. */
+  overscroll-behavior: contain auto;
+  /* Let a vertical gesture reach the arsenal's details on very short screens. Native
+     axis arbitration still keeps horizontal swipes inside the weapon strip. */
+  touch-action: pan-x pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-inline: 3px;
+}
+.battle-shell button {
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.battle-shell button,
+.battle-shell summary,
+.battle-shell label {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.battle-shell [data-control] {
+  touch-action: none;
+}
+.battle-shell button:focus-visible,
+.battle-shell input:focus-visible,
+.battle-shell summary:focus-visible {
+  outline: 3px solid #ffd166;
+  outline-offset: 2px;
+}
+.battle-shell button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.battle-shell [data-control]:active:not(:disabled),
+.hud-fire:active:not(:disabled) {
+  filter: brightness(1.25);
+}
+.hud-weapon-slot {
+  flex: 0 0 96px;
+  min-height: 64px;
+  padding: 6px 8px;
+  border: 1px solid #6d60ad;
+  border-radius: 8px;
+  background: linear-gradient(#403674, #29234f);
+  color: #fff6e6;
+  text-align: left;
+  position: relative;
+}
+.hud-weapon-slot[aria-pressed='true'] {
+  border: 2px solid var(--weapon-accent);
+  padding: 5px 7px;
+  background: linear-gradient(#594894, #2d2558);
+  box-shadow: inset 0 -3px 0 var(--weapon-accent);
+}
+@media (hover: hover) {
+  .hud-weapon-slot:not(:disabled):hover {
+    filter: brightness(1.2);
+  }
+}
+.hud-weapon-slot[hidden],
+.hud-new-draft[hidden] {
+  display: none;
+}
+.hud-weapon-slot kbd {
+  font-size: 10px;
+  color: #bab2e2;
+  position: absolute;
+  top: 4px;
+  right: 6px;
+}
+.hud-slot-name {
+  display: block;
+  font-size: 12px;
+  font-weight: bold;
+  min-height: 28px;
+  line-height: 1.1;
+  padding-right: 8px;
+}
+.hud-slot-ammo {
+  display: block;
+  font-size: 11px;
+  color: var(--weapon-accent);
+  margin-top: 4px;
+}
+.hud-weapon-slot[data-depleted='true'] .hud-slot-ammo {
+  color: #ff5d62;
+}
+.hud-selected-weapon {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0;
+}
+.hud-selected-weapon strong {
+  color: #ffd166;
+  font-size: 14px;
+}
+.hud-selected-weapon span {
+  color: #bab2e2;
+  margin-left: 10px;
+  font-size: 12px;
+}
+.hud-selected-weapon [data-weapon-ammo] {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.hud-weapon-info {
+  font-size: 13px;
+}
+.hud-weapon-info[open] {
+  max-height: 160px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.hud-weapon-info summary {
+  color: #8fe9ff;
+  cursor: pointer;
+  min-height: 44px;
+  padding: 12px 2px;
+  position: sticky;
+  top: 0;
+  background: #231d46;
+  z-index: 1;
+  touch-action: manipulation;
+}
+.hud-weapon-info p {
+  margin: 5px 0 8px;
+  line-height: 1.4;
+}
+.hud-weapon-tags {
+  color: #ffd166;
+}
+.hud-weapon-info dl {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr auto 1fr;
+  gap: 6px 10px;
+  font-size: 12px;
+}
+.hud-weapon-info dt {
+  color: #bab2e2;
+}
+.hud-weapon-info dd {
+  margin: 0;
+}
+.hud-weapon-info small {
+  display: block;
+  color: #bab2e2;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.hud-aim-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+.hud-aim-control {
+  min-width: 0;
+}
+.hud-aim-control label {
+  display: flex;
+  justify-content: space-between;
+  color: #bab2e2;
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+.hud-aim-control output {
+  color: #fff6e6;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.hud-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.hud-slider-row button,
+.hud-movement button {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  border: 1px solid #8a80e0;
+  border-radius: 10px;
+  background: linear-gradient(#594ba8, #382d74);
+  color: #fff6e6;
+  font-size: 22px;
+  font-weight: bold;
+  padding: 0;
+}
+.hud-slider-row input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: none;
+}
+.hud-slider-row input::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 8px;
+  background: #8979bc;
+}
+.hud-slider-row input::-moz-range-track {
+  height: 6px;
+  border-radius: 8px;
+  background: #8979bc;
+}
+.hud-slider-row input::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -11px;
+  border-radius: 50%;
+  border: 2px solid #ffe4a8;
+  background: #ffd166;
+  box-shadow: 0 2px 6px #100c23;
+}
+.hud-slider-row input::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #ffe4a8;
+  background: #ffd166;
+}
+.hud-slider-row input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.hud-launch {
+  font-size: 11px;
+  color: #bab2e2;
+  margin: 6px 0;
+}
+.hud-fire-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.hud-movement {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hud-movement > div {
+  flex: 1;
+  min-width: 64px;
+}
+.hud-movement strong {
+  display: block;
+  font-size: 11px;
+  color: #bab2e2;
+  margin-bottom: 5px;
+}
+.hud-movement [data-movement] {
+  color: #fff6e6;
+  white-space: nowrap;
+}
+.hud-movement meter {
+  width: 100%;
+  height: 8px;
+  accent-color: #7ee36b;
+}
+.hud-fire,
+.hud-new-draft {
+  min-width: 72px;
+  min-height: 52px;
+  padding: 8px 18px;
+  background: linear-gradient(#ff7256, #d73547);
+  border: 2px solid #ffb18c;
+  border-radius: 10px;
+  color: #fff6e6;
+  font-weight: 900;
+  font-size: 20px;
+  box-shadow: 0 3px 0 #351526;
+}
+.hud-new-draft {
+  background: #382d74;
+  border-color: #8a80e0;
+  font-size: 12px;
+  padding: 8px;
+}
+@media (max-width: 1000px) {
+  .battle-shell {
+    --edge-top: max(4px, env(safe-area-inset-top));
+    --edge-bottom: max(4px, env(safe-area-inset-bottom));
+    left: max(4px, env(safe-area-inset-left));
+    right: max(4px, env(safe-area-inset-right));
+    gap: 6px;
+  }
+  .battle-hud-top {
+    gap: 8px;
+    padding: 6px 8px;
+    grid-template-columns: minmax(0, 1fr) minmax(150px, 1fr) minmax(0, 1fr) 60px;
+  }
+  .hud-player-heading {
+    font-size: 12px;
+    flex-wrap: wrap;
+  }
+  .hud-status {
+    font-size: 13px;
+  }
+  .hud-match-heading > span,
+  .hud-section-heading > span,
+  .hud-selected-weapon span {
+    display: none;
+  }
+  .battle-hud-dock {
+    gap: 12px;
+    padding: 8px 10px;
+    grid-template-columns: minmax(0, 1fr) minmax(430px, 1fr);
+  }
+  .hud-aim {
+    padding-left: 12px;
+  }
+  .hud-fire {
+    padding: 8px 12px;
+    font-size: 18px;
+  }
+}
+/* Portrait phones/tablets retain all controls; only the arsenal/info scroll, not FIRE. */
+@media (max-width: 799px) and (orientation: portrait) {
+  .battle-hud-dock {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) max-content;
+    gap: 6px;
+    max-height: min(52dvh, 390px);
+  }
+  .hud-aim {
+    border-left: 0;
+    border-top: 1px solid #4d4590;
+    padding: 6px 0 0;
+  }
+  .hud-aim-grid {
+    gap: 10px;
+  }
+  .hud-weapon-info[open] {
+    max-height: 110px;
+  }
+  .hud-weapon-info dl {
+    grid-template-columns: auto 1fr auto 1fr;
+  }
+  .hud-section-heading {
+    margin-bottom: 4px;
+  }
+}
+@media (max-width: 600px) and (orientation: portrait) {
+  .battle-hud-top {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 54px;
+    gap: 5px 6px;
+  }
+  .hud-match {
+    grid-column: 1 / 4;
+    grid-row: 2;
+  }
+  .hud-match-heading {
+    display: inline;
+    margin-right: 8px;
+  }
+  .hud-status {
+    display: inline;
+  }
+  .hud-wind {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+  }
+  .hud-message {
+    display: none;
+  }
+  .hud-orientation-hint {
+    display: block;
+    margin-top: 3px;
+  }
+  .hud-menu-host {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .hud-player {
+    padding: 5px 6px;
+  }
+  .hud-player[data-active='true'] {
+    padding: 4px 5px;
+  }
+  .hud-player-heading {
+    font-size: 11px;
+    gap: 3px;
+  }
+  .hud-player-heading [data-activity] {
+    font-size: 10px;
+  }
+  .hud-health-row {
+    gap: 5px;
+    margin: 5px 0 3px;
+  }
+  .hud-health-row strong {
+    font-size: 12px;
+  }
+  .hud-player-weapon {
+    font-size: 10px;
+  }
+  .battle-hud-dock {
+    padding: 7px 8px;
+  }
+  .hud-section-heading {
+    font-size: 11px;
+  }
+  .hud-selected-weapon strong {
+    font-size: 13px;
+  }
+  .hud-aim-control label {
+    font-size: 11px;
+  }
+  .hud-aim-control output {
+    font-size: 18px;
+  }
+  .hud-slider-row {
+    gap: 6px;
+  }
+  .hud-launch {
+    font-size: 10px;
+  }
+}
+@media (max-width: 420px) and (orientation: portrait) {
+  /* Two +/- buttons must not squeeze the angle/power track down to a thumb-width. */
+  .hud-aim-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+  .hud-aim-control {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    align-items: center;
+    gap: 6px;
+  }
+  .hud-aim-control label {
+    flex-direction: column;
+    margin: 0;
+  }
+}
+/* A right-hand rail makes a short landscape arena ~2x wider than the old stacked HUD.
+   The arena still fits the whole world, undistorted. No forced orientation/fullscreen API. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .battle-shell {
+    grid-template-areas: 'arena dock';
+    grid-template-columns: minmax(0, 1fr) clamp(276px, 34vw, 340px);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .battle-hud-top {
+    /* The floating strip spans only the arena column, leaving the control rail clear. */
+    right: calc(max(4px, env(safe-area-inset-right)) + clamp(276px, 34vw, 340px) + 6px);
+    padding: 2px 4px;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 1fr) minmax(0, 1fr) 58px;
+  }
+  .hud-player {
+    padding: 4px 6px;
+  }
+  .hud-player[data-active='true'] {
+    padding: 3px 5px;
+  }
+  .hud-player-heading {
+    font-size: 11px;
+    flex-wrap: nowrap;
+  }
+  .hud-player-heading [data-activity] {
+    font-size: 10px;
+  }
+  .hud-player-weapon,
+  .hud-message,
+  .hud-match-heading > span {
+    display: none;
+  }
+  .hud-health-row {
+    margin: 4px 0 0;
+  }
+  .hud-match-heading {
+    font-size: 10px;
+  }
+  .hud-status {
+    font-size: 12px;
+    margin: 2px 0;
+  }
+  .hud-wind {
+    font-size: 11px;
+  }
+  .battle-hud-dock {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) max-content;
+    gap: 6px;
+    padding: 6px 8px;
+    max-height: none;
+  }
+  .hud-aim {
+    border-left: 0;
+    border-top: 1px solid #4d4590;
+    padding: 6px 0 0;
+  }
+  .hud-aim > .hud-section-heading {
+    display: none;
+  }
+  .hud-aim-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+  .hud-aim-control {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    align-items: center;
+    gap: 6px;
+  }
+  .hud-aim-control label {
+    flex-direction: column;
+    margin: 0;
+    font-size: 10px;
+  }
+  .hud-aim-control output {
+    font-size: 18px;
+  }
+  .hud-section-heading {
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+  .hud-section-heading > span,
+  .hud-selected-weapon span {
+    display: none;
+  }
+  .hud-slider-row {
+    gap: 6px;
+  }
+  .hud-launch {
+    font-size: 10px;
+    margin: 4px 0;
+  }
+  .hud-fire-row {
+    gap: 6px;
+  }
+  .hud-movement {
+    gap: 6px;
+  }
+  .hud-movement > div {
+    min-width: 55px;
+  }
+  .hud-movement strong {
+    font-size: 10px;
+  }
+  .hud-fire {
+    min-width: 64px;
+    min-height: 48px;
+    padding: 6px 8px;
+    font-size: 16px;
+  }
+  .hud-new-draft {
+    min-height: 48px;
+  }
+  .hud-selected-weapon strong {
+    font-size: 12px;
+  }
+  .hud-weapon-info[open] {
+    max-height: 100px;
+  }
+  .hud-weapon-info dl {
+    grid-template-columns: auto 1fr auto 1fr;
+  }
+}
+/* Keep core controls reachable on unusually short windows / split-screen views. */
+@media (max-height: 360px) and (orientation: landscape) {
+  .hud-weapon-slot {
+    min-height: 56px;
+  }
+  .hud-slot-name {
+    font-size: 11px;
+    min-height: 24px;
+  }
+  .hud-slot-ammo {
+    font-size: 10px;
+    margin-top: 2px;
+  }
+  .hud-arsenal > .hud-section-heading {
+    display: none;
+  }
+  .hud-launch {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle-shell * {
+    scroll-behavior: auto;
+  }
+}
+/* Online connection strip: status, latency and opponent-connectivity notices. */
+.online-status-strip {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  bottom: max(6px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 4px 14px;
+  border-radius: 999px;
+  border: 1px solid #6d60ad;
+  background: #100c23d0;
+  color: #bab2e2;
+  font-size: 12px;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+.online-status-strip[data-status='connected'] [data-online-status-label] {
+  color: #9fe8a9;
+}
+.online-status-strip[data-status='reconnecting'] [data-online-status-label] {
+  color: #ffd166;
+}
+.online-status-strip[data-status='closed'] [data-online-status-label] {
+  color: #ff8d8d;
+}
+.online-status-strip [data-online-notice] {
+  color: #ffd166;
+}
+/* Online match results: winner announcement, rematch voting, return to menu. */
+.online-results {
+  position: fixed;
+  z-index: 45;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 10px;
+  min-width: min(420px, 86vw);
+  padding: 22px 26px;
+  border-radius: 16px;
+  border: 1px solid #6d60ad;
+  background: linear-gradient(160deg, #2d2558f0, #17132ff0 65%);
+  box-shadow: 0 8px 40px #080415c0;
+  color: #fff6e6;
+  text-align: center;
+}
+.online-results h2 {
+  margin: 0;
+  font-size: 34px;
+  letter-spacing: 3px;
+}
+.online-results h2[data-result='win'] {
+  color: #ffd166;
+}
+.online-results h2[data-result='loss'] {
+  color: #9fb3ff;
+}
+.online-results p {
+  margin: 0;
+  color: #bab2e2;
+  font-size: 14px;
+}
+.online-results-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.online-results-actions button {
+  min-height: 48px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid #6d60ad;
+  background: #24223d;
+  color: #fff6e6;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.online-results-actions [data-action='rematch']:not(:disabled) {
+  background: #ffd166;
+  border-color: #c89a3a;
+  color: #17132e;
+}
+.online-results-actions button:disabled {
+  opacity: 0.65;
+  cursor: default;
+}

@@ -1,0 +1,248 @@
+:root {
+  color-scheme: dark;
+  font-family: 'Trebuchet MS', 'Segoe UI', Arial, system-ui, sans-serif;
+  background: #100c23;
+  color: #fff6e6;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* App viewport, not a scrolling web page. Native menus/arsenal keep their own scroll
+   containers; pinch zoom is NOT disabled in the viewport meta tag. */
+html,
+body {
+  overscroll-behavior: none;
+}
+body {
+  position: fixed;
+  inset: 0;
+}
+button,
+input,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background:
+    radial-gradient(ellipse at 25% 20%, #39316a80, transparent 55%),
+    radial-gradient(ellipse at 85% 70%, #89559b30, transparent 45%), #100c23;
+}
+
+#app {
+  position: fixed;
+  /* Use a real inset viewport, not padding: Phaser measures the parent's border box.
+     Padding plus independent canvas max-width/height was distorting the battlefield. */
+  width: auto;
+  height: auto;
+  min-height: 0;
+  inset: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+
+canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  border: 1px solid #8975c560;
+  border-radius: clamp(8px, 1.2vw, 18px);
+  box-shadow:
+    0 0 0 4px #17132e,
+    0 22px 80px #080415b3,
+    0 0 100px #6145aa22;
+  touch-action: none;
+}
+
+/* Gameplay reflows around the same undistorted 1280 × 720 projection. */
+@media (max-width: 600px) {
+  #app {
+    inset: max(4px, env(safe-area-inset-top)) max(4px, env(safe-area-inset-right))
+      max(4px, env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left));
+  }
+  canvas {
+    border-radius: 8px;
+  }
+}
+
+/* Native pause/help dialog: actual focusable controls, large touch targets, and scrollable
+   content on small screens. Colours match the existing golden-hour arcade canvas artwork. */
+.battle-menu-trigger,
+.battle-menu button {
+  color: #fff6e6;
+  background: linear-gradient(#594ba8, #382d74);
+  border: 2px solid #8a80e0;
+  border-radius: 10px;
+  font:
+    bold 14px 'Trebuchet MS',
+    'Segoe UI',
+    Arial,
+    sans-serif;
+  cursor: pointer;
+}
+
+.battle-menu-trigger {
+  position: fixed;
+  z-index: 5;
+  box-shadow: 0 3px 0 #17132e;
+}
+.battle-menu button {
+  min-height: 44px;
+  padding: 10px 18px;
+}
+.battle-menu button:hover,
+.battle-menu-trigger:hover {
+  filter: brightness(1.18);
+}
+.battle-menu :focus-visible,
+.battle-menu-trigger:focus-visible {
+  outline: 3px solid #ffd166;
+  outline-offset: 3px;
+}
+
+.battle-menu {
+  width: min(560px, calc(100vw - 24px));
+  max-height: calc(100dvh - 32px);
+  padding: clamp(16px, 4vw, 28px);
+  border: 2px solid #8a80e0;
+  border-radius: 18px;
+  background: #17132f;
+  color: #fff6e6;
+  box-shadow: 0 16px 80px #080415b3;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  line-height: 1.5;
+}
+
+.battle-menu::backdrop {
+  background: #100c23c9;
+}
+.battle-menu h1 {
+  color: #ffd166;
+  font-size: 30px;
+  line-height: 1.2;
+  margin: 8px 0;
+}
+.battle-menu p {
+  margin: 8px 0 16px;
+}
+.battle-menu .menu-eyebrow {
+  font-size: 11px;
+  color: #8fe9ff;
+  letter-spacing: 1.4px;
+}
+.battle-menu .menu-primary {
+  width: 100%;
+  color: #17132e;
+  background: #ffd166;
+  border-color: #ffe5ab;
+}
+.battle-menu fieldset {
+  margin: 20px 0 16px;
+  border: 1px solid #4d4590;
+  border-radius: 10px;
+}
+.battle-menu legend {
+  color: #ffd166;
+  padding: 0 8px;
+}
+.battle-menu label {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+}
+.battle-menu input {
+  width: 20px;
+  height: 20px;
+  accent-color: #ffd166;
+}
+.battle-menu .menu-background {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+}
+.battle-menu .menu-background select {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #8a80e0;
+  border-radius: 8px;
+  background: #17132e;
+  color: #fff6e6;
+  padding: 10px;
+  font: inherit;
+  touch-action: manipulation;
+}
+.battle-menu .menu-background select:focus-visible {
+  outline: 3px solid #ffd166;
+  outline-offset: 3px;
+}
+.battle-menu .menu-slider {
+  justify-content: space-between;
+  font-size: 14px;
+}
+.battle-menu input[type='range'] {
+  flex: 1 1 auto;
+  width: auto;
+  max-width: 62%;
+  height: 28px;
+}
+.battle-menu summary {
+  padding: 12px 0;
+  cursor: pointer;
+  color: #8fe9ff;
+  font-weight: bold;
+}
+.battle-menu dl {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 8px 12px;
+}
+.battle-menu dt {
+  color: #ffd166;
+  font-weight: bold;
+}
+.battle-menu dd {
+  margin: 0;
+}
+.battle-menu .menu-note {
+  font-size: 12px;
+  color: #bab2e2;
+  margin: 12px 0 0;
+}
+.battle-menu .menu-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+.battle-menu .menu-actions button {
+  flex: 1 1 160px;
+}
+.battle-menu .menu-confirmation {
+  border-top: 1px solid #4d4590;
+  margin-top: 16px;
+  padding-top: 8px;
+}
+.battle-menu .menu-danger {
+  background: #8b273e;
+  border-color: #ff5d62;
+}

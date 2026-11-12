@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+
+# Local tooling state
+.designer/
+.dtrace-cache/
+.vite-dev.pid
+.vercel/
