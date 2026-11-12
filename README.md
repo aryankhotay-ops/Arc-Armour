@@ -2,7 +2,7 @@
 
 Arc & Armor is an original two-player, turn-based artillery game for the web. The project uses TypeScript and Phaser 3, with deterministic gameplay isolated from rendering so that the same simulation can later power both local play and an authoritative multiplayer server.
 
-This repository implements **Milestone 0** plus a playable local combat vertical slice from the [development plan](plan.md). It includes an arcade menu, local setup, weapon catalog/draft, responsive Phaser battlefield, terrain-following tank movement, aiming, swept projectile combat, destructible/additive terrain, alternating turns, inventory, original audio, pause/help and saved preferences. Normal play now uses only **60 Original + Deluxe reference weapons**, with original HP-based behavior adaptations. Fourteen tank choices include refined reference-inspired silhouettes and separately rotating barrels. Dedicated results flow, broader balance/qualification and online multiplayer remain later work; the local release gate is not yet passed.
+The current build includes playable local combat and authoritative two-player online rooms. It has an arcade menu, weapon catalog/draft, responsive Phaser battlefield, destructible/additive terrain, alternating turns, inventory, original audio, pause/help and saved preferences. The normal depot contains **194 adapted weapons** and local play offers **14 selectable tanks**. Online rooms use shared default tank geometry for deterministic synchronization. See the [development plan](plan.md) and latest checkpoint below; broader balance and release qualification remain open.
 
 ## Public multiplayer deployment — latest, 2026-11-12
 
@@ -13,9 +13,12 @@ This repository implements **Milestone 0** plus a playable local combat vertical
 
 The persistent Node server now runs on Render's **free** plan (Oregon, Node 22, one instance,
 protocol v3). `VITE_MULTIPLAYER_URL` is configured on the Vercel project for Production and
-Preview, so Create Room / Join Room use Render without any `?server=` parameter. Both hosts
-are connected to the GitHub repository and auto-deploy from `main`. Room state is in memory;
-server restarts/redeploys clear rooms. No database or paid plan was provisioned.
+Preview, so Create Room / Join Room use Render without any `?server=` parameter. Vercel
+auto-deploys from GitHub `main`. Render currently builds from the public repository URL;
+deploys were triggered through its API. To enable automatic server builds on pushes, link
+the GitHub repository through the Render dashboard's Git integration. Otherwise use Manual
+Deploy there. Room state is in memory; server restarts/redeploys clear rooms. No database or
+paid plan was provisioned.
 
 Public-network testing also exposed two reconnection timing hazards that localhost tests
 missed: a fresh WebSocket welcome could overwrite the held-seat token, and Render's proxy
@@ -39,6 +42,10 @@ node scripts/check-live-online.mjs
 The script uses two isolated browser contexts on the real Vercel URL with no server override;
 it checks create/invite/join/ready, matching terrain, two alternating shots, crater/health
 synchronization and transport resumption. See [deployment instructions](deploy/README.md).
+The live smoke passed on the public hosts, with no browser runtime exceptions; its captured
+battlefield is [live-battlefield.png](artifacts/ui/online/live-battlefield.png). Lint,
+typecheck and builds pass, with 517 unit tests (including proxy-handoff and token-rotation
+regressions). An actual idle-service cold start was not exercised in this check.
 Earlier sections below are historical checkpoints, not the current hosting status.
 
 ## Hosting and the "Create room does nothing" report — earlier, 2026-11-12

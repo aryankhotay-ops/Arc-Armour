@@ -18,8 +18,11 @@ hang and fail. Local play never needs the server.
 - Render service: <https://dashboard.render.com/web/srv-dbqnqtajnfac7398tf40>
 
 The service already exists. Do not import the Blueprint again unless creating a separate
-staging environment. Both Render and Vercel auto-deploy from `main`; server redeploys reset
-in-memory rooms. Vercel Production and Preview have `VITE_MULTIPLAYER_URL` configured.
+staging environment. Vercel auto-deploys from `main`; Production and Preview have
+`VITE_MULTIPLAYER_URL` configured. Render currently clones the public repository URL, so
+use **Manual Deploy → Deploy latest commit** or its API for server changes. Automatic
+server deployments require connecting the repository through Render's GitHub integration.
+Server redeploys reset in-memory rooms.
 
 ## 1. Deploy the server (Render)
 
